@@ -1,0 +1,39 @@
+{
+  "type": "create:mechanical_crafting",
+  "accept_mirrored": true,
+  "category": "misc",
+  "key": {
+    "A": {
+      "item": "create:andesite_alloy"
+    },
+    "B": {
+      "item": "create:brass_casing"
+    },
+    "C": {
+      "item": "numismatics:crown"
+    },
+    "E": {
+      "item": "create:electron_tube"
+    },
+    "I": {
+      "item": "createaddition:iron_wire"
+    },
+    "L": {
+      "item": "create:redstone_link"
+    },
+    "W": {
+      "item": "createaddition:copper_wire"
+    }
+  },
+  "pattern": [
+    "AAAAAA",
+    "ABEEBA",
+    "AILCIA",
+    "ABWWBA",
+    "AAAAAA"
+  ],
+  "result": {
+    "count": 1,
+    "id": "createblockchain:currency_miner"
+  }
+}

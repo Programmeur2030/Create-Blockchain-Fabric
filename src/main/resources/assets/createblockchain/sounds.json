@@ -1,0 +1,8 @@
+{
+  "coin_chaching": {
+    "subtitle": "sounds.createblockchain.coin_chaching",
+    "sounds": [
+      "createblockchain:custom/coin_chaching"
+    ]
+  }
+}

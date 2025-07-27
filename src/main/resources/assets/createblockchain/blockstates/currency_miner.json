@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "createblockchain:block/currency_miner" }
+  }
+}
