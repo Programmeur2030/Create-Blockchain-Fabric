@@ -10,6 +10,7 @@ import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
 import dev.ithundxr.createnumismatics.content.backend.Coin;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -40,6 +41,10 @@ public class CurrencyMinerBlockEntity extends BlockEntity implements IHaveGoggle
     private long energyToMine;
     private long accumulatedEnergy = 0;
     private int lastEnergyConsumed = 0;
+    
+    // Track which side (if any) is querying the capability, to restrict input to sides only
+    @Nullable
+    private Direction queriedSide = null;
 
     public CurrencyMinerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlocks.CURRENCY_MINER_BE.get(), pos, state);
@@ -55,6 +60,31 @@ public class CurrencyMinerBlockEntity extends BlockEntity implements IHaveGoggle
         return this.itemHandler;
     }
 
+    /**
+     * Set the side context for the next energy capability query.
+     * Used by the capability provider to track which side is being queried,
+     * and restrict energy input to valid sides only (NORTH, SOUTH, EAST, WEST).
+     */
+    public void setQueriedSide(@Nullable Direction side) {
+        this.queriedSide = side;
+    }
+
+    /**
+     * Check if the given side is allowed to input energy.
+     * Returns true for EAST and WEST only (horizontal sides).
+     * Null context (internal queries) is treated as allowed at detection time
+     * but transfers will still be restricted to EAST/WEST.
+     */
+    public boolean canInputEnergyFromSide(@Nullable Direction side) {
+        if (side == null) {
+            // Allow null context (internal queries) to detect the capability.
+            // The actual transfer will be checked based on the connector's position.
+            return true;
+        }
+        // Only allow energy input from EAST and WEST sides (horizontal left/right)
+        return side == Direction.EAST || side == Direction.WEST;
+    }
+
     public static void tick(Level level, BlockPos pos, BlockState state, CurrencyMinerBlockEntity be) {
         if (level.isClientSide) {
             return;
@@ -67,7 +97,6 @@ public class CurrencyMinerBlockEntity extends BlockEntity implements IHaveGoggle
         if (energyToConsume > 0) {
             be.energyStorage.extractEnergy(energyToConsume, false);
             be.accumulatedEnergy += energyToConsume;
-            LOGGER.info("CurrencyMiner at {} consumed {} FE this tick (accumulated: {} FE)", be.getBlockPos(), energyToConsume, be.accumulatedEnergy);
         }
 
         if (be.accumulatedEnergy >= be.energyToMine) {

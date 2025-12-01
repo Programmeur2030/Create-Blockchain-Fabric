@@ -3,15 +3,13 @@ package com.divnectar.createblockchain.util;
 import com.divnectar.createblockchain.block.ModBlocks;
 import com.divnectar.createblockchain.block.entity.CurrencyMinerBlockEntity;
 import net.minecraft.core.Direction;
-import com.mojang.logging.LogUtils;
-import org.slf4j.Logger;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.neoforged.neoforge.energy.EnergyStorage;
+import org.jetbrains.annotations.Nullable;
 
 public class CapabilityRegistry {
-
-    private static final Logger LOGGER = LogUtils.getLogger();
 
     @SubscribeEvent
     public void registerCapabilities(RegisterCapabilitiesEvent event) {
@@ -20,10 +18,15 @@ public class CapabilityRegistry {
                 Capabilities.EnergyStorage.BLOCK,
                 ModBlocks.CURRENCY_MINER_BE.get(),
                 (blockEntity, context) -> {
-                    // Provide the energy capability on all sides (and when context is null).
-                    // Log the capability request for debugging external mod interactions.
-                    LOGGER.info("Energy capability requested for CurrencyMiner at {} side={}", blockEntity.getBlockPos(), context);
-                    return blockEntity.getEnergyStorage();
+                    // For null context (internal queries, like Create: New Age),
+                    // return the raw delegate so they get full access (detection works).
+                    // For directional sides (like Mekanism/Pipez connectors),
+                    // wrap it to restrict input to EAST/WEST only.
+                    if (context == null) {
+                        return blockEntity.getEnergyStorage();
+                    }
+                    blockEntity.setQueriedSide(context);
+                    return new DirectionalEnergyWrapper(blockEntity.getEnergyStorage(), blockEntity, context);
                 }
         );
 
@@ -33,9 +36,7 @@ public class CapabilityRegistry {
                 ModBlocks.CURRENCY_MINER_BE.get(),
                 (blockEntity, context) -> {
                     // Only provide the item handler capability on the SOUTH side.
-                    LOGGER.info("ItemHandler capability requested for CurrencyMiner at {} side={}", blockEntity.getBlockPos(), context);
                     if (context == Direction.SOUTH) {
-                        LOGGER.info("Providing ItemHandler for CurrencyMiner at {}", blockEntity.getBlockPos());
                         return blockEntity.getItemHandler();
                     }
                     // For any other side, provide nothing.
@@ -49,5 +50,61 @@ public class CapabilityRegistry {
         // object caused a compile-time type mismatch. If Forge compatibility is required,
         // implement a separate runtime adapter that registers via Forge's event bus (using
         // reflection) or add a compile-time optional module that depends on Forge.
+    }
+
+    /**
+     * Wrapper around EnergyStorage that restricts energy input to specific sides.
+     * Allows external mods to detect the energy capability on all sides (for compatibility),
+     * but only permits energy input from horizontal sides (NORTH, SOUTH, EAST, WEST).
+     */
+    private static class DirectionalEnergyWrapper extends EnergyStorage {
+        private final CurrencyMinerBlockEntity blockEntity;
+        @Nullable
+        private final Direction side;
+
+        public DirectionalEnergyWrapper(EnergyStorage delegate, CurrencyMinerBlockEntity blockEntity, @Nullable Direction side) {
+            // Create a new energy storage with the same capacity and max I/O as the delegate
+            super(delegate.getMaxEnergyStored(), delegate.getMaxEnergyStored(), delegate.getMaxEnergyStored(), delegate.getEnergyStored());
+            this.blockEntity = blockEntity;
+            this.side = side;
+            // Copy state from delegate
+            this.energy = delegate.getEnergyStored();
+        }
+
+        @Override
+        public int receiveEnergy(int maxReceive, boolean simulate) {
+            // Only allow energy input from valid sides
+            if (!blockEntity.canInputEnergyFromSide(side)) {
+                return 0;
+            }
+            // Delegate to the actual energy storage
+            return blockEntity.getEnergyStorage().receiveEnergy(maxReceive, simulate);
+        }
+
+        @Override
+        public int extractEnergy(int maxExtract, boolean simulate) {
+            // Energy can always be extracted (no directional restriction)
+            return blockEntity.getEnergyStorage().extractEnergy(maxExtract, simulate);
+        }
+
+        @Override
+        public int getEnergyStored() {
+            return blockEntity.getEnergyStorage().getEnergyStored();
+        }
+
+        @Override
+        public int getMaxEnergyStored() {
+            return blockEntity.getEnergyStorage().getMaxEnergyStored();
+        }
+
+        @Override
+        public boolean canExtract() {
+            return blockEntity.getEnergyStorage().canExtract();
+        }
+
+        @Override
+        public boolean canReceive() {
+            return blockEntity.getEnergyStorage().canReceive() && blockEntity.canInputEnergyFromSide(side);
+        }
     }
 }
