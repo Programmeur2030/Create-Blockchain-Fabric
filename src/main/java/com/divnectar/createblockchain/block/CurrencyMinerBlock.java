@@ -3,7 +3,6 @@ package com.divnectar.createblockchain.block;
 import com.divnectar.createblockchain.block.entity.CurrencyMinerBlockEntity;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -30,8 +29,6 @@ public class CurrencyMinerBlock extends BaseEntityBlock {
         builder.add(POWERED);
     }
 
-    // CORRECTED: This method tells the game not to assume this is a full, opaque cube.
-    // This fixes rendering issues where you can see through the world.
     @Override
     public boolean useShapeForLightOcclusion(BlockState pState) {
         return true;
@@ -56,6 +53,6 @@ public class CurrencyMinerBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        return createTickerHelper(type, ModBlocks.CURRENCY_MINER_BE.get(), CurrencyMinerBlockEntity::tick);
+        return createTickerHelper(type, ModBlocks.CURRENCY_MINER_BE, CurrencyMinerBlockEntity::tick);
     }
 }

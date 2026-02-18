@@ -1,47 +1,36 @@
 package com.divnectar.createblockchain;
 
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import me.shedaniel.autoconfig.AutoConfig;
+import me.shedaniel.autoconfig.ConfigData;
+import me.shedaniel.autoconfig.annotation.ConfigEntry;
+import me.shedaniel.autoconfig.serializer.GsonConfigSerializer;
 
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Item;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.event.config.ModConfigEvent;
-import net.neoforged.neoforge.common.ModConfigSpec;
+@me.shedaniel.autoconfig.annotation.Config(name = CreateBlockchain.MODID)
+public class Config implements ConfigData {
 
-// An example config class. This is not required, but it's a good idea to have one to keep your config organized.
-// Demonstrates how to use Neo's config APIs
-public class Config {
-    private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+    @ConfigEntry.Gui.Tooltip
+    public int baseEnergyPerCoin = 830000;
 
+    @ConfigEntry.Gui.Tooltip
+    public int difficultyBonus = 10000;
 
-    public static final ModConfigSpec.IntValue BASE_ENERGY_PER_COIN = BUILDER
-            .comment("The base amount of Forge Energy (FE) required to mine one coin. Default value is around 1 coin per min with two max speed alternators.")
-            .defineInRange("baseEnergyPerCoin", 830000, 1, Integer.MAX_VALUE);
-    public static final ModConfigSpec.IntValue DIFFICULTY_BONUS = BUILDER
-            .comment("How much additional FE is added to the mining cost each time the difficulty increases.")
-            .defineInRange("difficultyBonus", 10000, 1, Integer.MAX_VALUE);
-    public static final ModConfigSpec.IntValue DIFFICULTY_INTERVAL = BUILDER
-            .comment("How many coins must be mined globally before the mining cost increases by the difficulty bonus.")
-            .defineInRange("difficultyInterval", 110, 1, Integer.MAX_VALUE);
-    public static final ModConfigSpec.IntValue MAX_ENERGY_CONSUMPTION = BUILDER
-            .comment("The maximum amount of FE the miner can consume per tick.")
-            .defineInRange("maxEnergyConsumption", 4096, 1, Integer.MAX_VALUE);
-    public static final ModConfigSpec.IntValue ENERGY_CAPACITY = BUILDER
-            .comment("The total amount of FE the miner can store internally.")
-            .defineInRange("energyCapacity", 100000, 1, Integer.MAX_VALUE);
-    public static final ModConfigSpec.ConfigValue<String> COIN_TO_GENERATE = BUILDER
-            .comment("The type of coin to generate when mining. Can be SPUR, BEVEL, SPROCKET, COG, CROWN, or SUN.")
-            .define("coinToGenerate", "SPUR");
+    @ConfigEntry.Gui.Tooltip
+    public int difficultyInterval = 110;
 
+    @ConfigEntry.Gui.Tooltip
+    public int maxEnergyConsumption = 4096;
 
+    @ConfigEntry.Gui.Tooltip
+    public int energyCapacity = 100000;
 
-    static final ModConfigSpec SPEC = BUILDER.build();
+    @ConfigEntry.Gui.Tooltip
+    public String coinToGenerate = "SPUR";
 
-    private static boolean validateItemName(final Object obj) {
-        return obj instanceof String itemName && BuiltInRegistries.ITEM.containsKey(ResourceLocation.parse(itemName));
+    public static Config get() {
+        return AutoConfig.getConfigHolder(Config.class).getConfig();
+    }
+
+    public static void register() {
+        AutoConfig.register(Config.class, GsonConfigSerializer::new);
     }
 }

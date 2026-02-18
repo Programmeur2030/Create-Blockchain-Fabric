@@ -1,88 +1,55 @@
 package com.divnectar.createblockchain.block.entity;
 
 import com.divnectar.createblockchain.Config;
-import com.divnectar.createblockchain.CreateBlockchain;
 import com.divnectar.createblockchain.block.ModBlocks;
 import com.divnectar.createblockchain.sound.ModSounds;
 import com.divnectar.createblockchain.world.CurrencyTracker;
 import com.mojang.logging.LogUtils;
 import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
 import dev.ithundxr.createnumismatics.content.backend.Coin;
+import net.fabricmc.fabric.api.transfer.v1.energy.EnergyStorage;
+import net.fabricmc.fabric.api.transfer.v1.item.InventoryStorage;
+import net.fabricmc.fabric.api.transfer.v1.storage.base.SidedStorageBlockEntity;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.energy.EnergyStorage;
-import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
+import team.reborn.energy.api.base.SimpleEnergyStorage;
 
 import java.util.List;
 
-public class CurrencyMinerBlockEntity extends BlockEntity implements IHaveGoggleInformation {
+public class CurrencyMinerBlockEntity extends BlockEntity implements IHaveGoggleInformation, SidedStorageBlockEntity {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    private final EnergyStorage energyStorage;
-    private final ItemStackHandler itemHandler = new ItemStackHandler(1); // One slot for the output coin
+    public final SimpleEnergyStorage energyStorage;
+    public final SimpleContainer inventory = new SimpleContainer(1);
+    private final InventoryStorage inventoryStorage = InventoryStorage.of(inventory, null);
+
 
     private long energyToMine;
     private long accumulatedEnergy = 0;
     private int lastEnergyConsumed = 0;
-    
-    // Track which side (if any) is querying the capability, to restrict input to sides only
-    @Nullable
-    private Direction queriedSide = null;
 
     public CurrencyMinerBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlocks.CURRENCY_MINER_BE.get(), pos, state);
-        this.energyStorage = new EnergyStorage(Config.ENERGY_CAPACITY.get(), Config.MAX_ENERGY_CONSUMPTION.get(), Config.MAX_ENERGY_CONSUMPTION.get());
-        this.energyToMine = Config.BASE_ENERGY_PER_COIN.get();
-    }
-
-    public EnergyStorage getEnergyStorage() {
-        return this.energyStorage;
-    }
-
-    public ItemStackHandler getItemHandler() {
-        return this.itemHandler;
-    }
-
-    /**
-     * Set the side context for the next energy capability query.
-     * Used by the capability provider to track which side is being queried,
-     * and restrict energy input to valid sides only (NORTH, SOUTH, EAST, WEST).
-     */
-    public void setQueriedSide(@Nullable Direction side) {
-        this.queriedSide = side;
-    }
-
-    /**
-     * Check if the given side is allowed to input energy.
-     * Returns true for EAST and WEST only (horizontal sides).
-     * Null context (internal queries) is treated as allowed at detection time
-     * but transfers will still be restricted to EAST/WEST.
-     */
-    public boolean canInputEnergyFromSide(@Nullable Direction side) {
-        if (side == null) {
-            // Allow null context (internal queries) to detect the capability.
-            // The actual transfer will be checked based on the connector's position.
-            return true;
-        }
-        // Only allow energy input from EAST and WEST sides (horizontal left/right)
-        return side == Direction.EAST || side == Direction.WEST;
+        super(ModBlocks.CURRENCY_MINER_BE, pos, state);
+        this.energyStorage = new SimpleEnergyStorage(Config.get().energyCapacity, Config.get().maxEnergyConsumption, Config.get().maxEnergyConsumption) {
+            @Override
+            protected void onFinalCommit() {
+                setChanged();
+            }
+        };
+        this.energyToMine = Config.get().baseEnergyPerCoin;
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, CurrencyMinerBlockEntity be) {
@@ -92,10 +59,10 @@ public class CurrencyMinerBlockEntity extends BlockEntity implements IHaveGoggle
 
         be.updateMiningCost();
 
-        int energyToConsume = be.energyStorage.extractEnergy(Config.MAX_ENERGY_CONSUMPTION.get(), true);
+        long energyToConsume = be.energyStorage.extract(Config.get().maxEnergyConsumption, true);
 
         if (energyToConsume > 0) {
-            be.energyStorage.extractEnergy(energyToConsume, false);
+            be.energyStorage.extract(energyToConsume, false);
             be.accumulatedEnergy += energyToConsume;
         }
 
@@ -108,9 +75,8 @@ public class CurrencyMinerBlockEntity extends BlockEntity implements IHaveGoggle
         }
 
         if (be.lastEnergyConsumed != energyToConsume || level.getGameTime() % 20 == 0) {
-            be.lastEnergyConsumed = energyToConsume;
-            setChanged(level, pos, state);
-            level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
+            be.lastEnergyConsumed = (int) energyToConsume;
+            be.setChanged();
         }
     }
 
@@ -118,68 +84,40 @@ public class CurrencyMinerBlockEntity extends BlockEntity implements IHaveGoggle
         if (this.level instanceof ServerLevel serverLevel) {
             CurrencyTracker.get(serverLevel).incrementMined();
 
-            // Get the coin type from the config file
-            String coinTypeName = Config.COIN_TO_GENERATE.get().toUpperCase();
+            String coinTypeName = Config.get().coinToGenerate.toUpperCase();
             Coin coinToMine;
             try {
                 coinToMine = Coin.valueOf(coinTypeName);
             } catch (IllegalArgumentException e) {
-                // If the user enters an invalid name, log a warning and default to COPPER.
-                LOGGER.warn("Invalid coin type '{}' in config. Defaulting to COPPER.", coinTypeName);
+                LOGGER.warn("Invalid coin type '{}' in config. Defaulting to SPUR.", coinTypeName);
                 coinToMine = Coin.SPUR;
             }
 
             ItemStack coinStack = new ItemStack(coinToMine.asStack().getItem());
-            serverLevel.playSound(null, this.worldPosition, ModSounds.COIN_CHACHING.get(), SoundSource.BLOCKS, 0.5f, 1.5f);
-            this.itemHandler.insertItem(0, coinStack, false);
+            serverLevel.playSound(null, this.worldPosition, ModSounds.COIN_CHACHING, SoundSource.BLOCKS, 0.5f, 1.5f);
+            this.inventory.addItem(coinStack);
         }
     }
 
     private void updateMiningCost() {
         if (this.level instanceof ServerLevel serverLevel) {
             int totalMined = CurrencyTracker.get(serverLevel).getTotalMined();
-            long difficultyBonus = (long) Math.floor((double) totalMined / Config.DIFFICULTY_INTERVAL.get()) * Config.DIFFICULTY_BONUS.get();
-            long newEnergyToMine = Config.BASE_ENERGY_PER_COIN.get() + difficultyBonus;
+            long difficultyBonus = (long) Math.floor((double) totalMined / Config.get().difficultyInterval) * Config.get().difficultyBonus;
+            long newEnergyToMine = Config.get().baseEnergyPerCoin + difficultyBonus;
 
             if (this.energyToMine != newEnergyToMine) {
                 this.energyToMine = newEnergyToMine;
-                setChanged(level, this.worldPosition, this.getBlockState());
-                level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), Block.UPDATE_ALL);
+                setChanged();
             }
         }
-    }
-
-    // --- DATA SYNC & NBT ---
-
-    @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider provider) {
-        CompoundTag tag = new CompoundTag();
-        this.saveAdditional(tag, provider);
-        return tag;
-    }
-
-    @Override
-    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider provider) {
-        this.loadAdditional(tag, provider);
-    }
-
-    @Nullable
-    @Override
-    public ClientboundBlockEntityDataPacket getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
-
-    @Override
-    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider lookupProvider) {
-        super.onDataPacket(net, pkt, lookupProvider);
     }
 
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider provider) {
         super.saveAdditional(tag, provider);
         tag.putLong("accumulatedEnergy", this.accumulatedEnergy);
-        tag.put("energy", energyStorage.serializeNBT(provider));
-        tag.put("inventory", itemHandler.serializeNBT(provider)); // Save the inventory
+        tag.putLong("energy", energyStorage.getAmount());
+        tag.put("inventory", inventory.createTag(provider));
         tag.putInt("lastEnergyConsumed", this.lastEnergyConsumed);
         tag.putLong("energyToMine", this.energyToMine);
     }
@@ -188,26 +126,17 @@ public class CurrencyMinerBlockEntity extends BlockEntity implements IHaveGoggle
     public void loadAdditional(CompoundTag tag, HolderLookup.Provider provider) {
         super.loadAdditional(tag, provider);
         this.accumulatedEnergy = tag.getLong("accumulatedEnergy");
-        if (tag.contains("energy", Tag.TAG_COMPOUND)) {
-            energyStorage.deserializeNBT(provider, tag.getCompound("energy"));
-        }
-        if (tag.contains("inventory", Tag.TAG_COMPOUND)) {
-            itemHandler.deserializeNBT(provider, tag.getCompound("inventory")); // Load the inventory
-        }
+        energyStorage.amount = tag.getLong("energy");
+        inventory.fromTag(tag.getList("inventory", CompoundTag.TAG_COMPOUND), provider);
         this.lastEnergyConsumed = tag.getInt("lastEnergyConsumed");
         this.energyToMine = tag.getLong("energyToMine");
     }
 
-    // --- GOGGLE INFORMATION ---
-
     @Override
     public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
-        String modId = CreateBlockchain.MODID;
-
-        tooltip.add(Component.translatable("goggle." + modId + ".info.header"));
-
+        tooltip.add(Component.translatable("goggle.createblockchain.info.header"));
         tooltip.add(Component.literal("  ")
-                .append(Component.translatable("goggle." + modId + ".info.usage"))
+                .append(Component.translatable("goggle.createblockchain.info.usage"))
                 .append(Component.literal(": " + this.lastEnergyConsumed + " FE/t").withStyle(ChatFormatting.AQUA)));
 
         double coinsPerMinute = 0;
@@ -216,19 +145,36 @@ public class CurrencyMinerBlockEntity extends BlockEntity implements IHaveGoggle
             coinsPerMinute = (1200.0) / ticksPerCoin;
         }
         tooltip.add(Component.literal("  ")
-                .append(Component.translatable("goggle." + modId + ".info.rate"))
+                .append(Component.translatable("goggle.createblockchain.info.rate"))
                 .append(Component.literal(String.format(": %.2f Coins/min", coinsPerMinute)).withStyle(ChatFormatting.GREEN)));
 
         tooltip.add(Component.literal("  ")
-                .append(Component.translatable("goggle." + modId + ".info.cost"))
+                .append(Component.translatable("goggle.createblockchain.info.cost"))
                 .append(Component.literal(": " + this.energyToMine + " FE").withStyle(ChatFormatting.GOLD)));
 
-        // Add inventory information
-        ItemStack storedStack = this.itemHandler.getStackInSlot(0);
+        ItemStack storedStack = this.inventory.getItem(0);
         tooltip.add(Component.literal("  ")
-                .append(Component.translatable("goggle." + modId + ".info.stored"))
+                .append(Component.translatable("goggle.createblockchain.info.stored"))
                 .append(Component.literal(": " + storedStack.getCount() + " ").append(storedStack.getHoverName()).withStyle(ChatFormatting.WHITE)));
 
         return true;
+    }
+
+    @Nullable
+    @Override
+    public EnergyStorage getEnergyStorage(Direction side) {
+        if (side == Direction.EAST || side == Direction.WEST) {
+            return energyStorage;
+        }
+        return null;
+    }
+
+    @Nullable
+    @Override
+    public InventoryStorage getItemStorage(Direction side) {
+        if (side == Direction.DOWN) {
+            return inventoryStorage;
+        }
+        return null;
     }
 }

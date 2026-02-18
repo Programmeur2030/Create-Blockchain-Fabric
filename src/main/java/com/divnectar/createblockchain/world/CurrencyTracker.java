@@ -3,30 +3,27 @@ package com.divnectar.createblockchain.world;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.saveddata.SavedData;
-import org.jetbrains.annotations.NotNull;
+import net.minecraft.world.PersistentState;
 
-public class CurrencyTracker extends SavedData {
+public class CurrencyTracker extends PersistentState {
 
     private int totalMined = 0;
     private static final String TAG_NAME = "currency_tracker";
 
-    private CurrencyTracker() {}
-
-    private CurrencyTracker(CompoundTag tag) {
-        this.totalMined = tag.getInt("totalMined");
-    }
+    public CurrencyTracker() {}
 
     public static CurrencyTracker load(CompoundTag tag, HolderLookup.Provider provider) {
-        return new CurrencyTracker(tag);
+        CurrencyTracker tracker = new CurrencyTracker();
+        tracker.totalMined = tag.getInt("totalMined");
+        return tracker;
     }
 
     public static CurrencyTracker get(ServerLevel level) {
-        return level.getDataStorage().computeIfAbsent(new SavedData.Factory<>(CurrencyTracker::new, CurrencyTracker::load, null), TAG_NAME);
+        return level.getDataStorage().computeIfAbsent(new PersistentState.Factory<>(CurrencyTracker::new, CurrencyTracker::load, null), TAG_NAME);
     }
 
     @Override
-    public @NotNull CompoundTag save(@NotNull CompoundTag compoundTag, @NotNull HolderLookup.Provider provider) {
+    public CompoundTag save(CompoundTag compoundTag, HolderLookup.Provider provider) {
         compoundTag.putInt("totalMined", totalMined);
         return compoundTag;
     }

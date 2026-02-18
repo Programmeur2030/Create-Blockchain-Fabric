@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "createblockchain",
+  "version": "${version}",
+  "name": "Create Blockchain",
+  "description": "Blockchain integration for Create",
+  "authors": [
+    "willemdeprogrammeur"
+  ],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.divnectar.createblockchain.CreateBlockchain"
+    ],
+    "fabric-datagen": [
+      "com.divnectar.createblockchain.datagen.ModDataGenerators"
+    ],
+    "modmenu": [
+      "com.divnectar.createblockchain.compat.ModMenuIntegration"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.15.11",
+    "fabric-api": ">=0.92.0+1.20.1",
+    "minecraft": "~1.20.1",
+    "create": ">=6.0.8.1",
+    "cloth-config": ">=11.1.118"
+  }
+}

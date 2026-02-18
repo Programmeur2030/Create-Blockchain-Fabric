@@ -1,13 +1,5 @@
 {
-  "itemGroup.createblockchain": "Example Mod Tab",
-  "block.createblockchain.example_block": "Example Block",
-  "item.createblockchain.example_item": "Example Item",
-
-  "createblockchain.configuration.title": "Create: Blockchain Configs",
-  "createblockchain.configuration.section.createblockchain.common.toml": "Create: Blockchain Configs",
-  "createblockchain.configuration.section.createblockchain.common.toml.title": "Create: Blockchain Configs",
-
-  "block.createblockchain.currency_miner": "Currency Miner",
+  "itemGroup.createblockchain": "Create Blockchain",
   "block.createblockchain.currency_miner": "Currency Miner",
 
   "goggle.createblockchain.info.header": "Currency Miner",
