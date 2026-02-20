@@ -11,7 +11,7 @@ import org.slf4j.Logger;
 
 public class CreateBlockchain implements ModInitializer {
     public static final String MODID = "createblockchain";
-    private static final Logger LOGGER = LogUtils.getLogger();
+    public static final Logger LOGGER = LogUtils.getLogger();
 
     @Override
     public void onInitialize() {
@@ -20,7 +20,7 @@ public class CreateBlockchain implements ModInitializer {
         AutoConfig.register(Config.class, GsonConfigSerializer::new);
 
         ModItems.register();
-        ModBlocks.register();
-        ModSounds.register();
+        //ModBlocks.register();
+        //ModSounds.register();
     }
 }

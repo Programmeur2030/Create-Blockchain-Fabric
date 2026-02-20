@@ -38,15 +38,17 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
     // Create ecosystem (Fabric versies!)
-    modImplementation "maven.modrinth:create:${project.create_version}"
-    modImplementation "maven.modrinth:createaddition:${project.create_addition_version}"
-    modImplementation "maven.modrinth:numismatics:${project.numismatics_version}"
+
+    modImplementation "maven.modrinth:create-fabric:HAqwA6X1"
+    modImplementation "maven.modrinth:createaddition:KIAYldwh"
+    modImplementation "maven.modrinth:numismatics:SJpLT0Bq"
 
     // Config
     modApi("me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}") {
         exclude(group: "net.fabricmc.fabric-api")
     }
     modImplementation "com.terraformersmc:modmenu:${project.modmenu_version}"
+    modImplementation files("libs/*")
 }
 
 loom {

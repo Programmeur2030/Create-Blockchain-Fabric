@@ -1,18 +1,30 @@
 package com.divnectar.createblockchain.datagen;
 
-import com.divnectar.createblockchain.CreateBlockchain;
 import com.divnectar.createblockchain.block.ModBlocks;
-import com.simibubi.create.content.processing.recipe.MechanicalCraftingRecipeBuilder;
+import com.divnectar.createblockchain.item.ModItems;
 import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
 import net.fabricmc.fabric.api.datagen.v1.provider.FabricRecipeProvider;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.data.recipes.FinishedRecipe;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.data.server.recipe.RecipeJsonProvider;
+import net.minecraft.data.server.recipe.ShapedRecipeJsonBuilder;
+import net.minecraft.item.ItemConvertible;
+import net.minecraft.item.Items;
+import net.minecraft.recipe.book.RecipeCategory;
+import net.minecraft.util.Identifier;
+import com.simibubi.create.api.data.recipe.MechanicalCraftingRecipeGen;
 
 import java.util.function.Consumer;
 
 public class ModRecipeProvider extends FabricRecipeProvider {
     public ModRecipeProvider(FabricDataOutput output) {
+        super(output);
+    }
+
+    @Override
+    public void generate(Consumer<RecipeJsonProvider> exporter) {
+        //MechanicalCraftingRecipeGen.offer;
+
+    }
+    /* public ModRecipeProvider(FabricDataOutput output) {
         super(output);
     }
 
@@ -32,5 +44,5 @@ public class ModRecipeProvider extends FabricRecipeProvider {
                 .key('I', BuiltInRegistries.ITEM.get(new ResourceLocation("createaddition", "iron_wire")))
                 .key('W', BuiltInRegistries.ITEM.get(new ResourceLocation("createaddition", "copper_wire")))
                 .build(exporter, new ResourceLocation(CreateBlockchain.MODID, "mechanical_crafting/currency_miner"));
-    }
+    } */
 }

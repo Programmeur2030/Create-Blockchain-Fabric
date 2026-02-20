@@ -1,58 +1,33 @@
 package com.divnectar.createblockchain.block;
 
-import com.divnectar.createblockchain.block.entity.CurrencyMinerBlockEntity;
-import com.mojang.serialization.MapCodec;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.BaseEntityBlock;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.RenderShape;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityTicker;
-import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.BooleanProperty;
+
+import net.minecraft.block.*;
+import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.shape.VoxelShape;
+import net.minecraft.world.BlockView;
 import org.jetbrains.annotations.Nullable;
 
-public class CurrencyMinerBlock extends BaseEntityBlock {
-    public static final BooleanProperty POWERED = BooleanProperty.create("powered");
-    public static final MapCodec<CurrencyMinerBlock> CODEC = simpleCodec(CurrencyMinerBlock::new);
-
-    public CurrencyMinerBlock(Properties properties) {
-        super(properties);
-        this.registerDefaultState(this.stateDefinition.any().setValue(POWERED, false));
+public class CurrencyMinerBlock extends BlockWithEntity implements BlockEntityProvider {
+    private static final VoxelShape SHAPE = Block.createCuboidShape(0, 0, 0, 16, 14, 16);
+    protected CurrencyMinerBlock(Settings settings) {
+        super(settings);
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(POWERED);
+    public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
+        return SHAPE;
     }
 
     @Override
-    public boolean useShapeForLightOcclusion(BlockState pState) {
-        return true;
+    public BlockRenderType getRenderType(BlockState state) {
+        return BlockRenderType.MODEL;
     }
 
     @Override
-    protected MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
-
-    @Override
-    public RenderShape getRenderShape(BlockState state) {
-        return RenderShape.MODEL;
-    }
-
-    @Nullable
-    @Override
-    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new CurrencyMinerBlockEntity(pos, state);
-    }
-
-    @Nullable
-    @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        return createTickerHelper(type, ModBlocks.CURRENCY_MINER_BE, CurrencyMinerBlockEntity::tick);
+    public @Nullable BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+        return null;
     }
 }
+
+

@@ -1,12 +1,15 @@
 package com.divnectar.createblockchain.world;
 
-import net.minecraft.core.HolderLookup;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.server.level.ServerLevel;
+
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.world.PersistentState;
 
 public class CurrencyTracker extends PersistentState {
-
+    @Override
+    public NbtCompound writeNbt(NbtCompound nbt) {
+        return null;
+    }
+/*
     private int totalMined = 0;
     private static final String TAG_NAME = "currency_tracker";
 
@@ -35,5 +38,5 @@ public class CurrencyTracker extends PersistentState {
     public void incrementMined() {
         this.totalMined++;
         setDirty();
-    }
+    } */
 }
